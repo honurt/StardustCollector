@@ -3,6 +3,7 @@ import sqlite3
 
 app = Flask(__name__)
 
+# PythonAnywhere'de çalışması için init_db() başlangıçta çalıştırılıyor
 # Veritabanını başlatan fonksiyon
 def init_db():
     conn = sqlite3.connect('database.db')
@@ -47,8 +48,8 @@ def save_score():
 def get_leaderboard():
     conn = sqlite3.connect('database.db')
     cursor = conn.cursor()
-    # En yüksek 5 skoru getiriyoruz
-    cursor.execute('SELECT username, score FROM leaderboard ORDER BY score DESC LIMIT 5')
+    # En yüksek 10 skoru getiriyoruz
+    cursor.execute('SELECT username, score FROM leaderboard ORDER BY score DESC LIMIT 10')
     data = cursor.fetchall()
     conn.close()
     return jsonify(data)
