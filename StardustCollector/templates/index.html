@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Dust Collector</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        #constellation-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .star-point {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: radial-gradient(circle, #fbbf24 0%, #f59e0b 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.8), inset 0 0 10px rgba(255, 255, 255, 0.4);
+            transition: transform 0.1s, box-shadow 0.1s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            user-select: none;
+            z-index: 2;
+            opacity: 0;
+            animation: starAppear 0.25s ease-in forwards;
+        }
+
+        @keyframes starAppear {
+            0% { opacity: 0; transform: scale(0.5); }
+            100% { opacity: 1; transform: scale(1); }
+        }
+
+        .star-point:hover {
+            transform: scale(1.15);
+            box-shadow: 0 0 25px rgba(251, 191, 36, 1), inset 0 0 10px rgba(255, 255, 255, 0.6);
+        }
+
+        .star-point:active {
+            transform: scale(0.9);
+        }
+
+        .constellation-name {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 20px;
+            font-weight: bold;
+            color: #fbbf24;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.6);
+        }
+
+        .game-area {
+            position: relative;
+            width: 800px;
+            height: 500px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            border: 3px solid #3b82f6;
+            border-radius: 15px;
+            overflow: visible;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.5), inset 0 0 30px rgba(251, 191, 36, 0.1);
+        }
+
+        .stardust-shimmer {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .shimmer-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: radial-gradient(circle, #fbbf24, #f59e0b);
+            border-radius: 50%;
+            box-shadow: 0 0 8px rgba(251, 191, 36, 0.9);
+        }
+
+        @keyframes shimmer-float {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0.5);
+            }
+            30% {
+                opacity: 1;
+            }
+            70% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--sx), var(--sy)) scale(0);
+            }
+        }
+
+        @keyframes intense-shimmer {
+            0% {
+                opacity: 0;
+                transform: translate(0, 0) scale(0.8);
+            }
+            25% {
+                opacity: 1;
+            }
+            75% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--sx), var(--sy)) scale(0);
+            }
+        }
+
+        .star-collected {
+            animation: starCollected 0.6s ease-out;
+        }
+
+        @keyframes starCollected {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+            100% { transform: scale(0); opacity: 0; }
+        }
+
+        .timer-warn {
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .stats-box {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.8), rgba(15, 23, 42, 0.8));
+            border: 2px solid #3b82f6;
+            border-radius: 10px;
+            padding: 15px 25px;
+        }
+
+        .stardust {
+            position: absolute;
+            pointer-events: none;
+            z-index: 3;
+        }
+
+        .stardust-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: radial-gradient(circle, #fbbf24, #f59e0b);
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.8);
+        }
+
+        @keyframes stardust-fall {
+            0% {
+                opacity: 1;
+                transform: translate(0, 0) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translate(var(--tx), var(--ty)) scale(0);
+            }
+        }
+
+        .welcome-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            backdrop-filter: blur(4px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .welcome-card {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(59, 130, 246, 0.5);
+            max-width: 500px;
+        }
+
+        .welcome-card h1 {
+            font-size: 48px;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #fbbf24, #f59e0b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .welcome-card p {
+            color: #cbd5e1;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+
+        .welcome-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(71, 85, 105, 0.5);
+            border: 2px solid #3b82f6;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 20px;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .welcome-input:focus {
+            border-color: #fbbf24;
+            background: rgba(71, 85, 105, 0.8);
+            box-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+        }
+
+        .welcome-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+        }
+
+        .welcome-btn:hover {
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.6);
+            transform: scale(1.02);
+        }
+
+        .welcome-btn:active {
+            transform: scale(0.98);
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            right: 15px;
+            font-size: 12px;
+            color: rgba(148, 163, 184, 0.7);
+            text-align: right;
+            pointer-events: none;
+        }
+
+        .footer a {
+            color: rgba(251, 191, 36, 0.8);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+
+        .footer a:hover {
+            color: rgba(251, 191, 36, 1);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-white">
+    <!-- Welcome Modal -->
+    <div class="welcome-modal" id="welcome-modal">
+        <div class="welcome-card">
+            <h1>✨ Stardust Collector ✨</h1>
+            <p>Click the constellation stars to earn points!</p>
+            <p class="text-sm text-slate-400 mb-6">You have 60 seconds to complete as many constellations as possible.</p>
+            <input
+                type="text"
+                id="welcome-username"
+                class="welcome-input"
+                placeholder="Enter your name..."
+                autocomplete="off"
+            >
+            <button class="welcome-btn" onclick="startGame()">Start Game</button>
+        </div>
+    </div>
+
+    <div class="flex flex-col items-center justify-center min-h-screen">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-5xl font-bold mb-2 text-yellow-400">✨ Stardust Collector</h1>
+            <p class="text-slate-400 italic">Click all constellation points to earn Stardust!</p>
+        </div>
+
+        <!-- Stats Row -->
+        <div class="flex gap-8 mb-6 justify-center">
+            <div class="stats-box">
+                <div class="text-sm text-slate-400 mb-1">Score</div>
+                <div class="text-4xl font-bold text-yellow-400" id="score">0</div>
+            </div>
+            <div class="stats-box">
+                <div class="text-sm text-slate-400 mb-1">Constellation</div>
+                <div class="text-2xl font-bold text-blue-400" id="constellation-name">Loading...</div>
+            </div>
+            <div class="stats-box">
+                <div class="text-sm text-slate-400 mb-1">Stars Collected</div>
+                <div class="text-3xl font-bold text-green-400"><span id="stars-collected">0</span>/<span id="stars-total">5</span></div>
+            </div>
+            <div class="stats-box">
+                <div class="text-sm text-slate-400 mb-1" id="timer-label">Time Left</div>
+                <div class="text-3xl font-bold text-red-400" id="timer">60</div>
+            </div>
+        </div>
+
+        <!-- Game Area -->
+        <div class="game-area" id="game-area">
+            <canvas id="constellation-canvas"></canvas>
+            <div class="constellation-name" id="const-name">Orion</div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="mt-12 w-96">
+            <h2 class="text-xl font-bold mb-4 text-center text-slate-300">🏆 Top 5 Stardust Collectors</h2>
+            <ul id="leaderboard" class="bg-slate-800 rounded-xl overflow-hidden border border-slate-700">
+            </ul>
+        </div>
+    </div>
+
+    <!-- Footer Credit -->
+    <div class="footer">
+        <div>Created by</div>
+        <div><a href="#" onclick="return false;">Onur Tercan</a></div>
+    </div>
+
+    <script>
+        const CONSTELLATIONS = [
+            { name: 'Orion', emoji: '🔵' },
+            { name: 'Ursa Major', emoji: '🐻' },
+            { name: 'Cassiopeia', emoji: '👑' },
+            { name: 'Perseus', emoji: '⚔️' },
+            { name: 'Andromeda', emoji: '👸' },
+            { name: 'Pegasus', emoji: '🐴' },
+            { name: 'Lyra', emoji: '🎵' },
+            { name: 'Aquila', emoji: '🦅' }
+        ];
+
+        let gameState = {
+            score: 0,
+            currentConstellationIndex: 0,
+            starsCollected: 0,
+            starsInConstellation: 5,
+            timeLeft: 10,
+            gameActive: true,
+            starPositions: [],
+            currentStarIndex: 0,
+            playerName: '',
+            clickedStarIndices: new Set()
+        };
+
+        let canvas, ctx;
+        let timerInterval = null;
+        let audioContext = null;
+
+        // Initialize Web Audio API
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        // Create shimmer effect around the game area
+        function createShimmerEffect(intensity = 'normal') {
+            const gameArea = document.getElementById('game-area');
+            const particleCount = intensity === 'normal' ? 8 : 20;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'shimmer-particle';
+
+                // Random position around the game area edges
+                const side = Math.floor(Math.random() * 4);
+                let x, y;
+
+                switch(side) {
+                    case 0: // Top
+                        x = Math.random() * gameArea.clientWidth;
+                        y = -20;
+                        break;
+                    case 1: // Right
+                        x = gameArea.clientWidth + 20;
+                        y = Math.random() * gameArea.clientHeight;
+                        break;
+                    case 2: // Bottom
+                        x = Math.random() * gameArea.clientWidth;
+                        y = gameArea.clientHeight + 20;
+                        break;
+                    case 3: // Left
+                        x = -20;
+                        y = Math.random() * gameArea.clientHeight;
+                        break;
+                }
+
+                // Random destination
+                const destX = (Math.random() - 0.5) * 200;
+                const destY = (Math.random() - 0.5) * 200;
+
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.setProperty('--sx', destX + 'px');
+                particle.style.setProperty('--sy', destY + 'px');
+
+                const duration = intensity === 'normal' ? 1.2 : 1.6;
+                const animationName = intensity === 'normal' ? 'shimmer-float' : 'intense-shimmer';
+                particle.style.animation = `${animationName} ${duration}s ease-out forwards`;
+
+                gameArea.appendChild(particle);
+
+                setTimeout(() => particle.remove(), duration * 1000);
+            }
+        }
+
+        // Play a beep sound for star click
+        function playStarClickSound() {
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+
+                // Create oscillator for star click
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+
+                osc.frequency.setValueAtTime(800, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.1);
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+
+                osc.start(now);
+                osc.stop(now + 0.1);
+
+                // Create shimmer effect on star click
+                createShimmerEffect('normal');
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }
+
+        // Play a chord sound for constellation completion
+        function playConstellationCompleteSound() {
+            try {
+                const ctx = initAudio();
+                const now = ctx.currentTime;
+
+                // Create three oscillators for a chord
+                const frequencies = [523.25, 659.25, 783.99]; // C, E, G (major chord)
+
+                frequencies.forEach(freq => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+
+                    osc.start(now);
+                    osc.stop(now + 0.5);
+                });
+            } catch (e) {
+                console.log('Audio error:', e);
+            }
+        }
+
+        function initCanvas() {
+            canvas = document.getElementById('constellation-canvas');
+            ctx = canvas.getContext('2d');
+            const gameArea = document.getElementById('game-area');
+            canvas.width = gameArea.clientWidth;
+            canvas.height = gameArea.clientHeight;
+        }
+
+        function drawLine(fromX, fromY, toX, toY) {
+            ctx.strokeStyle = 'rgba(251, 191, 36, 0.6)';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.beginPath();
+            ctx.moveTo(fromX + 20, fromY + 20);
+            ctx.lineTo(toX + 20, toY + 20);
+            ctx.stroke();
+        }
+
+        function redrawConstellation() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw lines between collected stars
+            for (let i = 0; i < gameState.starsCollected - 1; i++) {
+                const from = gameState.starPositions[i];
+                const to = gameState.starPositions[i + 1];
+                drawLine(from.x, from.y, to.x, to.y);
+            }
+        }
+
+        function getRandomPosition() {
+            const gameArea = document.getElementById('game-area');
+            const maxX = gameArea.clientWidth - 60;
+            const maxY = gameArea.clientHeight - 60;
+
+            let pos;
+            let isValid = false;
+
+            // Ensure new star doesn't spawn too close to existing stars
+            while (!isValid) {
+                pos = {
+                    x: Math.random() * maxX + 30,
+                    y: Math.max(80, Math.random() * (maxY - 80) + 30)
+                };
+
+                isValid = true;
+                for (let existing of gameState.starPositions) {
+                    const dist = Math.sqrt(
+                        Math.pow(pos.x - existing.x, 2) +
+                        Math.pow(pos.y - existing.y, 2)
+                    );
+                    if (dist < 100) {
+                        isValid = false;
+                        break;
+                    }
+                }
+            }
+
+            return pos;
+        }
+
+        function generateConstellation() {
+            const gameArea = document.getElementById('game-area');
+            gameArea.querySelectorAll('.star-point').forEach(el => el.remove());
+
+            const constellation = CONSTELLATIONS[gameState.currentConstellationIndex];
+            document.getElementById('const-name').textContent = constellation.name;
+            document.getElementById('constellation-name').textContent = constellation.name;
+
+            gameState.starsCollected = 0;
+            gameState.currentStarIndex = 0;
+            gameState.starPositions = [];
+            gameState.clickedStarIndices = new Set();
+            document.getElementById('stars-collected').textContent = 0;
+            document.getElementById('stars-total').textContent = gameState.starsInConstellation;
+
+            // Generate all star positions at once
+            for (let i = 0; i < gameState.starsInConstellation; i++) {
+                gameState.starPositions.push(getRandomPosition());
+            }
+
+            redrawConstellation();
+            showNextStar();
+        }
+
+        function showNextStar() {
+            if (!gameState.gameActive || gameState.currentStarIndex >= gameState.starsInConstellation) {
+                return;
+            }
+
+            const star = document.createElement('div');
+            star.className = 'star-point';
+            star.textContent = '⭐';
+            const starIndex = gameState.currentStarIndex;
+            star.dataset.starIndex = starIndex;
+
+            const pos = gameState.starPositions[starIndex];
+            star.style.left = pos.x + 'px';
+            star.style.top = pos.y + 'px';
+
+            star.onclick = (e) => clickStar(e, starIndex);
+            document.getElementById('game-area').appendChild(star);
+        }
+
+        function clickStar(e, starIndex) {
+            if (!gameState.gameActive) return;
+
+            // Verify this is the correct star in sequence
+            if (starIndex !== gameState.starsCollected) {
+                return; // Wrong star, ignore click
+            }
+
+            // Check if this star was already clicked
+            if (gameState.clickedStarIndices.has(starIndex)) {
+                return; // Already clicked, ignore
+            }
+
+            gameState.clickedStarIndices.add(starIndex);
+            const star = e.target;
+            gameState.starsCollected++;
+            gameState.currentStarIndex++;
+
+            playStarClickSound();
+
+            document.getElementById('stars-collected').textContent = gameState.starsCollected;
+
+            // Draw line from previous star to current star
+            if (gameState.starsCollected > 1) {
+                const prevPos = gameState.starPositions[gameState.starsCollected - 2];
+                const currPos = gameState.starPositions[gameState.starsCollected - 1];
+                drawLine(prevPos.x, prevPos.y, currPos.x, currPos.y);
+            }
+
+            star.style.animation = 'none';
+            star.style.opacity = '0.3';
+            star.style.pointerEvents = 'none'; // Disable further clicks on this star
+
+            // Check if constellation complete
+            if (gameState.starsCollected === gameState.starsInConstellation) {
+                completeConstellation();
+            } else {
+                // Show next star
+                setTimeout(showNextStar, 300);
+            }
+        }
+
+        function createStardustEffect(x, y) {
+            const gameArea = document.getElementById('game-area');
+            const particleCount = 20;
+
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'stardust-particle';
+
+                // Random angle and distance
+                const angle = (Math.random() * Math.PI * 2);
+                const distance = 100 + Math.random() * 150;
+                const tx = Math.cos(angle) * distance;
+                const ty = Math.sin(angle) * distance;
+
+                particle.style.left = x + 'px';
+                particle.style.top = y + 'px';
+                particle.style.setProperty('--tx', tx + 'px');
+                particle.style.setProperty('--ty', ty + 'px');
+                particle.style.animation = `stardust-fall ${0.8 + Math.random() * 0.4}s ease-out forwards`;
+
+                gameArea.appendChild(particle);
+
+                // Remove particle after animation
+                setTimeout(() => particle.remove(), 1200);
+            }
+        }
+
+        function completeConstellation() {
+            gameState.score++;
+            document.getElementById('score').textContent = gameState.score;
+
+            playConstellationCompleteSound();
+
+            // Create stardust effect at the center of constellation
+            const centerX = gameState.starPositions.reduce((sum, pos) => sum + pos.x, 0) / gameState.starPositions.length;
+            const centerY = gameState.starPositions.reduce((sum, pos) => sum + pos.y, 0) / gameState.starPositions.length;
+            createStardustEffect(centerX, centerY);
+
+            // Create intense shimmer effect around the game area
+            createShimmerEffect('intense');
+
+            gameState.currentConstellationIndex = (gameState.currentConstellationIndex + 1) % CONSTELLATIONS.length;
+
+            setTimeout(generateConstellation, 800);
+        }
+
+        function updateTimer() {
+            if (!gameState.gameActive) return;
+
+            gameState.timeLeft--;
+            const timerEl = document.getElementById('timer');
+            timerEl.textContent = gameState.timeLeft;
+
+            if (gameState.timeLeft <= 15) {
+                timerEl.classList.add('timer-warn');
+            }
+
+            if (gameState.timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameState.gameActive = false;
+
+            // CRITICAL: Stop the timer interval
+            if (timerInterval !== null) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            const gameArea = document.getElementById('game-area');
+            gameArea.querySelectorAll('.star-point').forEach(el => el.remove());
+            gameArea.innerHTML = `
+                <canvas id="constellation-canvas"></canvas>
+                <div class="constellation-name" style="top: 50%; transform: translate(-50%, -50%); left: 50%; font-size: 48px; text-shadow: 0 0 20px rgba(251, 191, 36, 0.8); white-space: nowrap;">
+                    <div>Game Over!</div>
+                    <div class="text-2xl mt-4">Final Score: <span class="text-yellow-400">${gameState.score}</span></div>
+                    <button onclick="playAgain()" class="mt-6 bg-blue-600 hover:bg-blue-500 px-8 py-3 rounded-lg font-semibold transition-colors text-lg">Play Again</button>
+                </div>
+            `;
+
+            // Auto-save the score
+            autoSaveScore();
+        }
+
+        function startGame() {
+            const username = document.getElementById('welcome-username').value.trim();
+            if (!username) {
+                alert("Please enter your name!");
+                return;
+            }
+
+            gameState.playerName = username;
+            document.getElementById('welcome-modal').style.display = 'none';
+
+            initCanvas();
+            generateConstellation();
+            loadLeaderboard();
+
+            // Start the timer and store the interval ID
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        async function autoSaveScore() {
+            const username = gameState.playerName;
+            const score = gameState.score;
+
+            if (!username) {
+                console.log("No username to save");
+                return false;
+            }
+
+            try {
+                console.log("Saving score:", username, score);
+                const response = await fetch('/save_score', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, score })
+                });
+
+                if (response.ok) {
+                    const result = await response.json();
+                    console.log("Score saved successfully!", result);
+
+                    // Wait for database to write
+                    await new Promise(resolve => setTimeout(resolve, 200));
+
+                    // Refresh leaderboard and highlight current player
+                    await loadLeaderboard(username);
+                    return true;
+                } else {
+                    console.error("Save failed with status:", response.status);
+                    return false;
+                }
+            } catch (e) {
+                console.error("Error saving score:", e);
+                return false;
+            }
+        }
+
+        function playAgain() {
+            // Keep the player name and restart immediately
+            const playerName = gameState.playerName;
+            console.log('Play Again clicked, player name:', playerName);
+
+            // Clear timer if exists
+            if (timerInterval !== null) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            // Reset game state
+            gameState = {
+                score: 0,
+                currentConstellationIndex: 0,
+                starsCollected: 0,
+                starsInConstellation: 5,
+                timeLeft: 60,
+                gameActive: true,
+                starPositions: [],
+                currentStarIndex: 0,
+                playerName: playerName,
+                clickedStarIndices: new Set()
+            };
+            console.log('Game state reset:', gameState);
+
+            // Reset UI
+            document.getElementById('score').textContent = 0;
+            document.getElementById('timer').textContent = 60;
+            document.getElementById('timer').classList.remove('timer-warn');
+
+            const gameArea = document.getElementById('game-area');
+            gameArea.innerHTML = `
+                <canvas id="constellation-canvas"></canvas>
+                <div class="constellation-name" id="const-name">Orion</div>
+            `;
+            console.log('Game area HTML reset');
+
+            // Restart game
+            console.log('Calling initCanvas...');
+            initCanvas();
+            console.log('Canvas initialized');
+
+            console.log('Calling generateConstellation...');
+            generateConstellation();
+            console.log('Constellation generated');
+
+            // Start the timer and store the interval ID
+            console.log('Starting timer...');
+            timerInterval = setInterval(updateTimer, 1000);
+            console.log('Game restarted successfully');
+        }
+
+        function resetGame() {
+            // Clear timer interval if it exists
+            if (timerInterval !== null) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            gameState = {
+                score: 0,
+                currentConstellationIndex: 0,
+                starsCollected: 0,
+                starsInConstellation: 5,
+                timeLeft: 60,
+                gameActive: true,
+                starPositions: [],
+                currentStarIndex: 0,
+                playerName: '',
+                clickedStarIndices: new Set()
+            };
+            document.getElementById('score').textContent = 0;
+            document.getElementById('timer').textContent = 60;
+            document.getElementById('timer').classList.remove('timer-warn');
+            document.getElementById('username').value = '';
+            document.getElementById('welcome-modal').style.display = 'flex';
+            document.getElementById('welcome-username').value = '';
+
+            const gameArea = document.getElementById('game-area');
+            gameArea.innerHTML = `
+                <canvas id="constellation-canvas"></canvas>
+                <div class="constellation-name" id="const-name">Orion</div>
+            `;
+        }
+
+        async function loadLeaderboard(highlightPlayer = null) {
+            try {
+                const response = await fetch('/leaderboard');
+                const data = await response.json();
+                const list = document.getElementById('leaderboard');
+
+                list.innerHTML = data.map((entry, idx) => {
+                    const [name, score] = entry;
+                    const isHighlighted = highlightPlayer && name === highlightPlayer;
+
+                    return `
+                        <li class="flex justify-between px-4 py-3 border-b border-slate-700 last:border-none transition-all ${isHighlighted ? 'bg-yellow-400 bg-opacity-30 font-bold' : (idx === 0 ? 'bg-yellow-500 bg-opacity-10' : '')}">
+                            <span class="text-slate-300">${idx + 1}. ${name}</span>
+                            <span class="font-bold text-yellow-400">${score} Points</span>
+                        </li>
+                    `;
+                }).join('');
+
+                console.log("Leaderboard loaded successfully");
+            } catch (e) {
+                console.error("Error loading leaderboard:", e);
+            }
+        }
+
+        // Initialize game - show welcome screen
+        window.onload = () => {
+            loadLeaderboard();
+        };
+    </script>
+</body>
+</html>
