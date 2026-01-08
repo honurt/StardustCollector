@@ -54,6 +54,8 @@ def get_leaderboard():
     conn.close()
     return jsonify(data)
 
+# PythonAnywhere'de çalışması için init_db() başlangıçta çalıştırılıyor
+init_db()
+
 if __name__ == '__main__':
-    init_db()
     app.run(debug=True)
